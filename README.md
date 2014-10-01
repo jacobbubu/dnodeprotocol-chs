@@ -5,9 +5,9 @@
 
 dnode 是传输协议无关的，尤其在 node.js 中，任何支持 Stream 的传输协议都可以应用 dnode。除了 Javascript，dnode 也有 Perl，PHP，Ruby，Objective-C 和 Java 等不同语言的实现。
 
-dnode 吸收了 Javascript 动态语言的灵活性，和 node.js 的异步特性，即简单轻巧，又适用于大部分的 RPC 场景。
+dnode 吸收了 Javascript 动态语言的灵活性和 node.js 的异步特性，即简单轻巧，又适用于大部分的“现代” RPC 场景。
 
-原本我只是想翻译 [dnode-protocol](https://github.com/substack/dnode-protocol/blob/master/doc/protocol.markdown))，后来发现作者写得实在是精炼，所以我不得不展开成为了一个协议小教程。
+原本我只是想翻译 [dnode-protocol](https://github.com/substack/dnode-protocol/blob/master/doc/protocol.markdown))，后来发现按照英文直译其实很难理解，因此扩展为一个小教程。
 
 如果你之前没用过 dnode，那么在阅读本文之前，建议先阅读 [dnode](https://github.com/substack/dnode)。
 
@@ -24,11 +24,11 @@ dnode 的消息有两种类型，“方法交换”消息和“方法调用”�
 在通信连接建立之后，RPC 的两端首先要做的就是和对方交换自己的方法信息，这样在本地就可以生成一个远端的代理对象。这是通过以下消息实现的：
 
 ``` json
-    {
-        "method" : "methods",
-        "arguments" : [ { "timesTen" : "[Function]", "moo" : "[Function]" } ],
-        "callbacks" : { "0" : ["0","timesTen"], "1" : ["0","moo"] }
-    }
+{
+    "method" : "methods",
+    "arguments" : [ { "timesTen" : "[Function]", "moo" : "[Function]" } ],
+    "callbacks" : { "0" : ["0","timesTen"], "1" : ["0","moo"] }
+}
 ```
 
 该 JSON 消息为了阅读方面，并没有写到一行里。
@@ -45,28 +45,28 @@ dnode 的消息有两种类型，“方法交换”消息和“方法调用”�
 我们看一个例子，其中既包含了“方法交换”也包含了“方法调用”的过程：
 
 ``` js
-    var proto = require('dnode-protocol');
+var proto = require('dnode-protocol');
 
-    var s = proto({
-        x : function (f, g) {
-            setTimeout(function () { f(5) }, 200);
-            setTimeout(function () { g(6) }, 400);
-        },
-        y : 555
-    });
-    var c = proto();
+var s = proto({
+    x : function (f, g) {
+        setTimeout(function () { f(5) }, 200);
+        setTimeout(function () { g(6) }, 400);
+    },
+    y : 555
+});
+var c = proto();
 
-    s.on('request', c.handle.bind(c));
-    c.on('request', s.handle.bind(s));
+s.on('request', c.handle.bind(c));
+c.on('request', s.handle.bind(s));
 
-    c.on('remote', function (remote) {
-        function f (x) { console.log('f(' + x + ')') }
-        function g (x) { console.log('g(' + x + ')') }
-        remote.x(f, g);
-    });
+c.on('remote', function (remote) {
+    function f (x) { console.log('f(' + x + ')') }
+    function g (x) { console.log('g(' + x + ')') }
+    remote.x(f, g);
+});
 
-    s.start();
-    c.start();
+s.start();
+c.start();
 ```
 
 这是 module [`dnode-protocol`](https://github.com/substack/dnode-protocol.git) 中的例子。这个 module 是 dnode 协议的 Javascript 实现，其本身和通信协议是无关的。具体 [`dnode-protocol`](https://github.com/substack/dnode-protocol.git) 的 API 的文档请直接去它的 GitHub 站点。
@@ -76,7 +76,7 @@ dnode 的消息有两种类型，“方法交换”消息和“方法调用”�
 
 `c` 收到这个消息之后，会转变为自身的 `remote` 事件(`c.on('remote', function (remote) {}`)，回调函数中的参数 `remote` 实际上是 `s` 的一个方法代理，执行 `remote.x(...)` 或者 `remote.y()` 将最终调用到 `s` 的 `x` 和 `y` 方法。
 
-上例中 c.on('remote', function (remote) {}` 最终调用了 `remote.x(f, g)`, 意味着为 `s.x` 方法传递了 `f` 和 `g` 两个回调函数，因此最终对 `s.x` 的调用又会回到 `c` 中的函数 `f` 和 `g`。该例最终的执行结果为：
+上例中 `c.on('remote', function (remote) {}` 最终调用了 `remote.x(f, g)`, 意味着为 `s.x` 方法传递了 `f` 和 `g` 两个回调函数，因此最终对 `s.x` 的调用又会回到 `c` 中的函数 `f` 和 `g`。该例最终的执行结果为：
 
 ```
 f(5)
@@ -175,12 +175,12 @@ links
 其产生的 message 为：
 
 ``` json
-    {
-        "method" : 12,
-        "arguments" : [ { "a" : 5, "b" : [ { "c" : 5 } ] } ],
-        "callbacks" : {},
-        "links" : [ { "from" : [ 0 ], "to" : [ 0, "b", 1 ] } ]
-    }
+{
+    "method" : 12,
+    "arguments" : [ { "a" : 5, "b" : [ { "c" : 5 } ] } ],
+    "callbacks" : {},
+    "links" : [ { "from" : [ 0 ], "to" : [ 0, "b", 1 ] } ]
+}
 ```
 
 `links` 是个数组，每个元素为一个包含 `from` 和 `to` 的 link 定义。上例中的唯一一个 link 定义表示：arguments 中的第一个元素的 key 为 "b" 的对象的第二个元素（`"to" : [ 0, "b", 1 ] }`），其值指向 arguments 的第一个元素（`"from" : [ 0 ]`）。
